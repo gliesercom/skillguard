@@ -167,7 +167,7 @@ const CONFIG_STORAGE_KEY = 'sg:config:v1';
 export function getSavedConfig(): ConnectionConfig {
   const fallback: ConnectionConfig = {
     mode: 'demo',
-    rpcUrl: deployment.rpcUrl || 'https://studio-dev.genlayer.com/api',
+    rpcUrl: deployment.rpcUrl || 'https://rpc-bradbury.genlayer.com',
     contractAddress: deployment.contractAddress || '',
   };
   if (typeof window === 'undefined') return fallback;
@@ -175,10 +175,27 @@ export function getSavedConfig(): ConnectionConfig {
     const raw = window.localStorage.getItem(CONFIG_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<ConnectionConfig>;
+    const rpcUrl = parsed.rpcUrl || fallback.rpcUrl;
+    const cleanRpc = rpcUrl.replace(/\/$/, '');
+    let contractAddress = parsed.contractAddress ?? fallback.contractAddress;
+    // 自动修正网络与合约地址不匹配的历史缓存
+    if (
+      cleanRpc === 'https://studio-dev.genlayer.com/api' &&
+      (!contractAddress || contractAddress.toLowerCase() === deployment.contractAddress.toLowerCase())
+    ) {
+      contractAddress = deployment.studioDevContractAddress || contractAddress;
+    } else if (
+      cleanRpc === BRADBURY_CONFIG.rpcUrl &&
+      (!contractAddress ||
+        (deployment.studioDevContractAddress &&
+          contractAddress.toLowerCase() === deployment.studioDevContractAddress.toLowerCase()))
+    ) {
+      contractAddress = deployment.contractAddress || contractAddress;
+    }
     return {
       mode: parsed.mode === 'live' ? 'live' : 'demo',
-      rpcUrl: parsed.rpcUrl || fallback.rpcUrl,
-      contractAddress: parsed.contractAddress ?? fallback.contractAddress,
+      rpcUrl,
+      contractAddress,
     };
   } catch {
     return fallback;
@@ -907,7 +924,9 @@ export async function deployBradburyContractViaWallet(): Promise<{
     });
   }
 
-  const res = await fetch('/bradbury-deploy-review.json', { cache: 'no-store' });
+  const res = await fetch(`${import.meta.env.BASE_URL}bradbury-deploy-review.json`, {
+    cache: 'no-store',
+  });
   if (!res.ok) {
     throw new Error('Failed to load pre-verified Bradbury deployment review bundle.');
   }

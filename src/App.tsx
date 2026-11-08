@@ -31,7 +31,7 @@ import {
   type ReleaseOrder,
   type ReleaseSpec,
 } from './lib/domain';
-import { buildPublicLiveTemplateSpec } from './lib/demo';
+import { DEMO_LOCALIZED_META, buildPublicLiveTemplateSpec } from './lib/demo';
 import {
   UI_TEXT,
   formatRiskLabel,
@@ -214,19 +214,30 @@ export default function App() {
   }
 
   async function handleConnectWallet() {
-    await runAction('Connecting wallet...', async () => {
+    await runAction(lang === 'zh' ? '正在连接浏览器钱包...' : 'Connecting wallet...', async () => {
       const addr = await connectBrowserWallet();
       setWalletAddr(addr);
-      setNoticeMessage(`Connected wallet ${shortenHex(addr, 6, 4)}`);
+      setNoticeMessage(
+        lang === 'zh'
+          ? `钱包已连接：${shortenHex(addr, 6, 4)}`
+          : `Connected wallet ${shortenHex(addr, 6, 4)}`
+      );
     });
   }
 
   async function handleInitStudioAccount() {
-    await runAction('Initializing Studio-dev ephemeral signer...', async () => {
-      const addr = await connectStudioDevAccount(config);
-      setWalletAddr(addr);
-      setNoticeMessage(`Studio-dev test signer ready: ${shortenHex(addr, 8, 6)}`);
-    });
+    await runAction(
+      lang === 'zh' ? '正在初始化 Studio-dev 临时测试签名账户...' : 'Initializing Studio-dev ephemeral signer...',
+      async () => {
+        const addr = await connectStudioDevAccount(config);
+        setWalletAddr(addr);
+        setNoticeMessage(
+          lang === 'zh'
+            ? `Studio-dev 临时测试账户已就绪：${shortenHex(addr, 8, 6)}`
+            : `Studio-dev test signer ready: ${shortenHex(addr, 8, 6)}`
+        );
+      }
+    );
   }
 
   async function handleLookupSubmit(e: FormEvent) {
@@ -578,6 +589,32 @@ export default function App() {
                     )}
                   </form>
 
+                  {filteredReleases.length === 0 && (
+                    <div className="sg-source-card" style={{ textAlign: 'center', padding: '24px 16px' }}>
+                      <strong style={{ display: 'block', marginBottom: 8 }}>
+                        {lang === 'zh'
+                          ? '当前链上合约暂无已登记的技能版本'
+                          : 'No releases registered on this contract yet'}
+                      </strong>
+                      <p style={{ fontSize: '0.82rem', color: '#94a3b8', margin: '0 0 14px' }}>
+                        {lang === 'zh'
+                          ? '当前连接的是全新的链上合约实例，您可以立即登记首个固定 Commit 技能版本，或切换至 Studio-dev / 本地演练沙箱查看预置样本。'
+                          : 'This deployed contract has 0 releases so far. Register the first commit-pinned skill release now, or switch to Studio-dev (Chain 61997) / Local Demo Sandbox.'}
+                      </p>
+                      <button
+                        type="button"
+                        className="sg-btn sg-btn-primary"
+                        onClick={() => {
+                          setDraft(buildPublicLiveTemplateSpec('1'));
+                          setPage('register');
+                        }}
+                      >
+                        <Plus size={15} />
+                        <span>{t.btnHeroRegister}</span>
+                      </button>
+                    </div>
+                  )}
+
                   {filteredReleases.map((item) => (
                     <button
                       key={item.id}
@@ -590,7 +627,11 @@ export default function App() {
                         </span>
                         <span>v{item.spec.version}</span>
                       </div>
-                      <h4>{item.spec.title}</h4>
+                      <h4>
+                        {lang === 'zh' && DEMO_LOCALIZED_META[item.id]?.titleZh
+                          ? DEMO_LOCALIZED_META[item.id].titleZh
+                          : item.spec.title}
+                      </h4>
                       <div className="sg-card-repo">
                         {item.spec.repo}@{item.spec.commitSha.slice(0, 8)}
                       </div>
@@ -613,14 +654,24 @@ export default function App() {
                     <div className="sg-detail-head">
                       <div>
                         <div className="sg-eyebrow">
-                          RELEASE SG-#{String(selected.id).padStart(3, '0')} · ROUND{' '}
-                          {selected.auditRound}
+                          {lang === 'zh'
+                            ? `版本编号 SG-#${String(selected.id).padStart(3, '0')} · 第 ${selected.auditRound} 轮共识审计`
+                            : `RELEASE SG-#${String(selected.id).padStart(3, '0')} · ROUND ${selected.auditRound}`}
                         </div>
-                        <h2>{selected.spec.title}</h2>
+                        <h2>
+                          {lang === 'zh' && DEMO_LOCALIZED_META[selected.id]?.titleZh
+                            ? DEMO_LOCALIZED_META[selected.id].titleZh
+                            : selected.spec.title}
+                        </h2>
                         <div className="sg-meta-row">
-                          <span>Repo: {selected.spec.repo}</span>
+                          <span>
+                            {lang === 'zh' ? '仓库' : 'Repo'}: {selected.spec.repo}
+                          </span>
                           <span>Commit: {selected.spec.commitSha}</span>
-                          <span>Submitter: {shortenHex(selected.submitter, 8, 6)}</span>
+                          <span>
+                            {lang === 'zh' ? '提交者' : 'Submitter'}:{' '}
+                            {shortenHex(selected.submitter, 8, 6)}
+                          </span>
                         </div>
                       </div>
                       <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
@@ -672,7 +723,13 @@ export default function App() {
                               ? '版本功能声明与多模型共识结论摘要'
                               : 'Declared Scope & Multi-LLM Consensus Summary'}
                           </strong>
-                          <p>{selected.attestation?.summary || selected.spec.scopeSummary}</p>
+                          <p>
+                            {lang === 'zh' && DEMO_LOCALIZED_META[selected.id]
+                              ? selected.attestation
+                                ? DEMO_LOCALIZED_META[selected.id].attestationSummaryZh
+                                : DEMO_LOCALIZED_META[selected.id].scopeSummaryZh
+                              : selected.attestation?.summary || selected.spec.scopeSummary}
+                          </p>
                           {selected.attestation &&
                             selected.attestation.findingCategories.length > 0 && (
                               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 12 }}>
@@ -712,7 +769,7 @@ export default function App() {
                         <table className="sg-matrix-table">
                           <thead>
                             <tr>
-                              <th>Capability Dimension</th>
+                              <th>{lang === 'zh' ? '安全能力维度' : 'Capability Dimension'}</th>
                               <th>{t.declaredCol}</th>
                               <th>{t.observedCol}</th>
                               <th>{t.statusCol}</th>
@@ -736,7 +793,13 @@ export default function App() {
                                   </td>
                                   <td>
                                     <span className={`sg-badge ${declared ? 'warn' : 'neutral'}`}>
-                                      {declared ? 'DECLARED: YES' : 'DECLARED: NO'}
+                                      {lang === 'zh'
+                                        ? declared
+                                          ? '已声明：是'
+                                          : '已声明：否'
+                                        : declared
+                                        ? 'DECLARED: YES'
+                                        : 'DECLARED: NO'}
                                     </span>
                                   </td>
                                   <td>
@@ -746,12 +809,20 @@ export default function App() {
                                           observed ? (violation ? 'blocked' : 'warn') : 'approved'
                                         }`}
                                       >
-                                        {check.state}
+                                        {lang === 'zh'
+                                          ? observed
+                                            ? '实测检出'
+                                            : '未检出'
+                                          : check.state}
                                         {check.evidenceIndices.length > 0 &&
-                                          ` (File #${check.evidenceIndices.join(', #')})`}
+                                          (lang === 'zh'
+                                            ? ` (文件 #${check.evidenceIndices.join(', #')})`
+                                            : ` (File #${check.evidenceIndices.join(', #')})`)}
                                       </span>
                                     ) : (
-                                      <span className="sg-badge neutral">AWAITING AUDIT</span>
+                                      <span className="sg-badge neutral">
+                                        {lang === 'zh' ? '待审计' : 'AWAITING AUDIT'}
+                                      </span>
                                     )}
                                   </td>
                                   <td>
@@ -883,7 +954,10 @@ export default function App() {
                                 </span>
                               </div>
                               <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '8px 0' }}>
-                                {ch.statement}
+                                {lang === 'zh' &&
+                                DEMO_LOCALIZED_META[selected.id]?.challengeStatementZh
+                                  ? DEMO_LOCALIZED_META[selected.id].challengeStatementZh
+                                  : ch.statement}
                               </p>
                               <div className="sg-meta-row">
                                 <span>Challenger: {shortenHex(ch.challenger, 8, 6)}</span>
@@ -1316,7 +1390,11 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
   "mcpServers": {
     "skillguard": {
       "command": "node",
-      "args": ["E:/UserData/jinjw/Documents/ChatGPT/Portal/skillguard/cli/mcp-server.mjs"]
+      "args": ["./cli/mcp-server.mjs"],
+      "env": {
+        "SKILLGUARD_RPC_URL": "https://rpc-bradbury.genlayer.com",
+        "SKILLGUARD_CONTRACT_ADDRESS": "${deployment.contractAddress}"
+      }
     }
   }
 }`}
@@ -1353,7 +1431,8 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                       setSettingsDraft({
                         mode: 'live',
                         rpcUrl: 'https://studio-dev.genlayer.com/api',
-                        contractAddress: deployment.contractAddress || '',
+                        contractAddress:
+                          deployment.studioDevContractAddress || deployment.contractAddress || '',
                       })
                     }
                   >
@@ -1366,7 +1445,7 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                       setSettingsDraft({
                         mode: 'live',
                         rpcUrl: BRADBURY_CONFIG.rpcUrl,
-                        contractAddress: settingsDraft.contractAddress,
+                        contractAddress: deployment.contractAddress || settingsDraft.contractAddress,
                       })
                     }
                   >

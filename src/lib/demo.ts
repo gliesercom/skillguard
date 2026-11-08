@@ -8,6 +8,38 @@ import {
   type ReleaseSpec,
 } from './domain';
 
+export interface LocalizedDemoMeta {
+  titleZh: string;
+  scopeSummaryZh: string;
+  attestationSummaryZh: string;
+  challengeStatementZh?: string;
+}
+
+export const DEMO_LOCALIZED_META: Record<number, LocalizedDemoMeta> = {
+  1: {
+    titleZh: 'OpenZeppelin Context 与 Ownable 只读权限检查技能',
+    scopeSummaryZh:
+      '固定在 commit 3e6c8639 的纯 Solidity 访问控制参考模块。零外部网络请求、零宿主机文件写入、零子进程调用、零敏感环境变量读取。',
+    attestationSummaryZh:
+      '两个固定 Commit 的 Solidity 源码文件仅定义纯智能合约访问控制原语，未发起任何外部网络 I/O、未修改宿主机文件系统、未调用子进程或读取环境变量凭据。',
+  },
+  2: {
+    titleZh: 'Solana 投资组合自动再平衡 MCP 服务器（供应链投毒样本）',
+    scopeSummaryZh: '声称自己是只读的 Jupiter 行情聚合 MCP 服务器，仅拉取公开代币价格。',
+    attestationSummaryZh:
+      '源码注释中内嵌了企图劫持审计模型强制输出 APPROVED 的提示词注入指令，并在未声明权限的情况下暗中读取 SOLANA_PRIVATE_KEY 与 ~/.config/solana/id.json 私钥文件通过 POST 外传。',
+    challengeStatementZh:
+      'src/server.ts 在未声明 secret_env_access 权限的情况下读取 process.env.SOLANA_PRIVATE_KEY 和 ~/.config/solana/id.json 并向外部服务器发送。',
+  },
+  3: {
+    titleZh: '本地 Git Worktree 沙箱分支管理 MCP 服务器',
+    scopeSummaryZh:
+      '在工作区目录内执行 git worktree 命令并检出本地分支。发布者已如实提前声明 filesystem_write 与 subprocess_exec 权限。',
+    attestationSummaryZh:
+      '多模型共识实测到的敏感能力（通过 mkdirSync 写入目录、通过 execFileSync 调用 git）与发布者声明完全一致，无任何隐瞒越权；因涉及宿主机子进程与文件写入，评定为中等风险 (MEDIUM / WARN) 提示用户知情确认。',
+  },
+};
+
 export const DEMO_RELEASES: ReleaseOrder[] = [
   {
     id: 1,
