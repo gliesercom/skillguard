@@ -1,0 +1,66 @@
+{
+  "verifiedAt": "2026-11-08T04:02:46.435Z",
+  "rpcUrl": "https://studio-dev.genlayer.com/api",
+  "chainId": 61997,
+  "contractAddress": "0x80C412F90Ad2d3E5F57437C753F9202b5090Fd18",
+  "releaseId": 1,
+  "transactions": {
+    "register_release": "0x1ed995d13b418bf4a11c346a9d526f83770eea2fe47a97e66e0d8227e8910238",
+    "lock_evidence": "0xab34f6a3ace0e9ec8de621bd87b3da7ae74880b782bbae07ca6486e9236c0f7d",
+    "audit_release": "0x5833d0cb5b880b7a12927dc6b44f6c302f42a2ffb7970825ca14c9b7a1ccf81d"
+  },
+  "snapshotHash": "d8fd891e7e2956dd7b3e93aef9d6dd8b0b2c432a8c8948ebd5327f3a3b072a37",
+  "attestation": {
+    "audit_round": 1,
+    "audited_at": "2026-11-08T04:02:00.107748Z",
+    "capability_checks": [
+      {
+        "capability_id": "network_access",
+        "evidence_indices": [],
+        "state": "NOT_OBSERVED"
+      },
+      {
+        "capability_id": "filesystem_write",
+        "evidence_indices": [],
+        "state": "NOT_OBSERVED"
+      },
+      {
+        "capability_id": "subprocess_exec",
+        "evidence_indices": [],
+        "state": "NOT_OBSERVED"
+      },
+      {
+        "capability_id": "secret_env_access",
+        "evidence_indices": [],
+        "state": "NOT_OBSERVED"
+      }
+    ],
+    "commit_sha": "3e6c86392c97fbc30d3d20a378a6f58beba08eba",
+    "declared_vs_actual_mismatch": false,
+    "evaluated_challenge_ids": [],
+    "finding_categories": [],
+    "policy_version": "skillguard/1",
+    "release_id": 1,
+    "repo": "OpenZeppelin/openzeppelin-contracts",
+    "resolved_challenge_ids": [],
+    "risk_level": "LOW",
+    "rubric_version": "skillguard/capability-rubric/1",
+    "scope_disclaimer": "Consensus risk signal over pinned source files only; not a formal security guarantee.",
+    "skill_id": "oz-context-inspector-skill",
+    "snapshot_hash": "d8fd891e7e2956dd7b3e93aef9d6dd8b0b2c432a8c8948ebd5327f3a3b072a37",
+    "source_checks": [
+      {
+        "byte_length": 860,
+        "index": 0,
+        "path": "contracts/utils/Context.sol",
+        "sha256": "9c1cc43aa4a2bde5c7dea0d4830cd42c54813ff883e55c8d8f12e6189bf7f10a",
+        "status": "VERIFIED"
+      }
+    ],
+    "spec_hash": "e84ea901535642a2e38daac867d6d833a72daebf73f4a7dc7337e9ab316c99ae",
+    "static_signals": [],
+    "summary": "The inspected code is a standard Solidity abstract contract (Context.sol) from the OpenZeppelin library. It provides internal helper functions to return msg.sender and msg.data for meta-transaction compatibility. The source does not perform any network operations, filesystem modifications, subprocess executions, or environment variable access. No security threats or undeclared capabilities were identified.",
+    "undeclared_capabilities": [],
+    "verdict": "APPROVED"
+  }
+}

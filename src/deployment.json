@@ -1,0 +1,26 @@
+{
+  "network": "bradbury-phase-2",
+  "rpcUrl": "https://rpc-bradbury.genlayer.com",
+  "chainId": 4221,
+  "contractAddress": "0x7de3BF9F73d512291f2623DCd3C618d4a83b9bb5",
+  "deploymentTx": "0x80bc276d37b19d044e7b72d4d4de950d38bc118c180b0e390976a8ca91d72a0d",
+  "policyVersion": "skillguard/1",
+  "rubricVersion": "skillguard/capability-rubric/1",
+  "canonicalSourceSha256": "fa9015ce128336d4035f3341c5a54ca10894d287b82e54424f8bdd1301607095",
+  "compactSourceSha256": "a591abe96d1d15edd20695125871bc7a19361286874fe20fa3e4085c6a6486af",
+  "runner": "py-genlayer:babwp9t37jw9g4j2bccgn14g6x7x9s1f7dsmh7emvz735pz4zxa0",
+  "verified": true,
+  "e2eVerified": true,
+  "environmentType": "public-testnet-bradbury-phase-2",
+  "publicChainDeploymentVerified": true,
+  "sampleReleaseIds": [
+    1
+  ],
+  "envelopeHash": "0xa0c7702eb196e47337543c059a53e949cd2d5d462684fa4d4c9e26978f36d68c",
+  "blockNumber": "250216",
+  "blockHash": "0x15d39b405d40c765143cd8c3d03bdf4115e1a9fef28528b4c4546d2df3934db9",
+  "explorerUrl": "https://scan.bradbury.genlayer.com/address/0x7de3BF9F73d512291f2623DCd3C618d4a83b9bb5",
+  "studioDevContractAddress": "0x80C412F90Ad2d3E5F57437C753F9202b5090Fd18",
+  "studioDevDeploymentTx": "0x5968834be1eef7ad61032792afd120ba67661c667e5c1dd40debef7fb9ec70b9",
+  "verifiedAt": "2026-11-08T05:06:31.408Z"
+}

@@ -1,0 +1,37 @@
+{
+  "name": "skillguard",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@11.25.0",
+  "bin": {
+    "skillguard": "./cli/skillguard.mjs",
+    "skillguard-mcp": "./cli/mcp-server.mjs"
+  },
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "test": "vitest run src && node --test tests/node/*.test.mjs",
+    "test:contract": "python -m unittest discover -s tests/python -p \"test_*.py\" -v",
+    "compact": "python scripts/generate-compact.py",
+    "preview": "vite preview --host 127.0.0.1",
+    "deploy:studio": "node scripts/deploy-studio.mjs",
+    "cli": "node cli/skillguard.mjs",
+    "mcp": "node cli/mcp-server.mjs"
+  },
+  "dependencies": {
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "lucide-react": "^0.468.0",
+    "genlayer-js": "2.0.0-rc.2",
+    "viem": "^2.38.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.4",
+    "typescript": "^5.9.3",
+    "vite": "^7.1.12",
+    "vitest": "^3.2.4"
+  }
+}

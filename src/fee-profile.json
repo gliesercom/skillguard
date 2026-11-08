@@ -1,0 +1,10 @@
+{
+  "format": "skillguard/development-fee-profile/1",
+  "network": "bradbury-development",
+  "scope": "Capped development allocation; live chain prices are quoted before wallet signing.",
+  "methods": ["register_release", "lock_evidence", "audit_release", "challenge_release"],
+  "leaderTimeunitsAllocation": "600",
+  "validatorTimeunitsAllocation": "600",
+  "executionBudgetPerRound": "10000000000000000",
+  "appealRounds": "0"
+}
