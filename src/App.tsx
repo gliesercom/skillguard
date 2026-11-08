@@ -246,115 +246,145 @@ export default function App() {
     if (!q || config.mode === 'demo') return;
     const idNum = Number(q);
     if (Number.isInteger(idNum) && idNum > 0) {
-      await runAction(`Loading release #${idNum} from GenLayer...`, async () => {
-        const order = await loadChainReleaseById(idNum, config);
-        upsertRelease(order);
-        setNoticeMessage(`Loaded release #${idNum} from chain.`);
-      });
+      await runAction(
+        lang === 'zh' ? `正在从链上读取版本 #${idNum}...` : `Loading release #${idNum} from GenLayer...`,
+        async () => {
+          const order = await loadChainReleaseById(idNum, config);
+          upsertRelease(order);
+          setNoticeMessage(
+            lang === 'zh' ? `已从链上加载版本 #${idNum}。` : `Loaded release #${idNum} from chain.`
+          );
+        }
+      );
     }
   }
 
   async function handleHashSourceFile(index: number) {
     const src = draft.sources[index];
     if (!src) return;
-    await runAction('Fetching raw GitHub bytes & computing SHA-256...', async () => {
-      const autoUrl =
-        src.url.trim() ||
-        (draft.repo && draft.commitSha && src.path
-          ? buildPinnedRawUrl(draft.repo, draft.commitSha, src.path)
-          : '');
-      const validUrl = validatePinnedUrl(autoUrl, draft.repo || undefined, draft.commitSha || undefined);
-      const res = await fetch(validUrl, { credentials: 'omit', redirect: 'error' });
-      if (!res.ok) {
-        throw new Error(`HTTP ${res.status} when fetching ${validUrl}`);
+    await runAction(
+      lang === 'zh'
+        ? '正在拉取 GitHub 原始字节并计算 SHA-256...'
+        : 'Fetching raw GitHub bytes & computing SHA-256...',
+      async () => {
+        const autoUrl =
+          src.url.trim() ||
+          (draft.repo && draft.commitSha && src.path
+            ? buildPinnedRawUrl(draft.repo, draft.commitSha, src.path)
+            : '');
+        const validUrl = validatePinnedUrl(autoUrl, draft.repo || undefined, draft.commitSha || undefined);
+        const res = await fetch(validUrl, { credentials: 'omit', redirect: 'error' });
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status} when fetching ${validUrl}`);
+        }
+        const buf = new Uint8Array(await res.arrayBuffer());
+        if (buf.byteLength === 0 || buf.byteLength > 16384) {
+          throw new Error(`File size (${buf.byteLength} bytes) must be between 1 and 16,384 bytes.`);
+        }
+        const hashBuf = await crypto.subtle.digest('SHA-256', buf);
+        const sha256 = Array.from(new Uint8Array(hashBuf))
+          .map((b) => b.toString(16).padStart(2, '0'))
+          .join('');
+        const preview = new TextDecoder('utf-8').decode(buf).slice(0, 600);
+        setDraft((prev) => ({
+          ...prev,
+          sources: prev.sources.map((item, i) =>
+            i === index
+              ? { ...item, url: validUrl, sha256, byteLength: buf.byteLength, contentPreview: preview }
+              : item
+          ),
+        }));
+        setNoticeMessage(
+          lang === 'zh'
+            ? `已计算 SHA-256（${shortenHex(sha256, 12, 8)}，共 ${buf.byteLength} 字节）。`
+            : `Computed SHA-256 (${shortenHex(sha256, 12, 8)}, ${buf.byteLength} bytes).`
+        );
       }
-      const buf = new Uint8Array(await res.arrayBuffer());
-      if (buf.byteLength === 0 || buf.byteLength > 16384) {
-        throw new Error(`File size (${buf.byteLength} bytes) must be between 1 and 16,384 bytes.`);
-      }
-      const hashBuf = await crypto.subtle.digest('SHA-256', buf);
-      const sha256 = Array.from(new Uint8Array(hashBuf))
-        .map((b) => b.toString(16).padStart(2, '0'))
-        .join('');
-      const preview = new TextDecoder('utf-8').decode(buf).slice(0, 600);
-      setDraft((prev) => ({
-        ...prev,
-        sources: prev.sources.map((item, i) =>
-          i === index
-            ? { ...item, url: validUrl, sha256, byteLength: buf.byteLength, contentPreview: preview }
-            : item
-        ),
-      }));
-      setNoticeMessage(`Computed SHA-256 (${shortenHex(sha256, 12, 8)}, ${buf.byteLength} bytes).`);
-    });
+    );
   }
 
   async function handleRegisterSubmit(e: FormEvent) {
     e.preventDefault();
-    await runAction('Registering release on SkillGuard...', async () => {
-      const created = await registerReleaseOrder(draft, releases, config);
-      upsertRelease(created);
-      setPage('registry');
-      setTab('sources');
-      setNoticeMessage(
-        lang === 'zh'
-          ? `版本 #${created.id} 已登记！请点击底部按钮执行【第一步：锁定源码哈希快照】。`
-          : `Release #${created.id} registered! Proceed to Step 1: Lock Pinned Source Snapshot.`
-      );
-    });
+    await runAction(
+      lang === 'zh' ? '正在向 SkillGuard 登记新版本...' : 'Registering release on SkillGuard...',
+      async () => {
+        const created = await registerReleaseOrder(draft, releases, config);
+        upsertRelease(created);
+        setPage('registry');
+        setTab('sources');
+        setNoticeMessage(
+          lang === 'zh'
+            ? `版本 #${created.id} 已登记！请点击底部按钮执行【第一步：锁定源码哈希快照】。`
+            : `Release #${created.id} registered! Proceed to Step 1: Lock Pinned Source Snapshot.`
+        );
+      }
+    );
   }
 
   async function handleLockEvidence() {
     if (!selected) return;
-    await runAction('Locking commit-pinned GitHub snapshot & scanning static signals...', async () => {
-      const updated = await lockReleaseEvidence(selected, config);
-      upsertRelease(updated);
-      setTab('sources');
-      setNoticeMessage(
-        lang === 'zh'
-          ? '源码快照已不可变锁定！现在可执行【第二步：多模型共识安全审计】。'
-          : 'Immutable source snapshot locked! Proceed to Step 2: Run Consensus Security Audit.'
-      );
-    });
+    await runAction(
+      lang === 'zh'
+        ? '正在锁定固定 Commit 的 GitHub 快照并扫描静态提示词注入信号...'
+        : 'Locking commit-pinned GitHub snapshot & scanning static signals...',
+      async () => {
+        const updated = await lockReleaseEvidence(selected, config);
+        upsertRelease(updated);
+        setTab('sources');
+        setNoticeMessage(
+          lang === 'zh'
+            ? '源码快照已不可变锁定！现在可执行【第二步：多模型共识安全审计】。'
+            : 'Immutable source snapshot locked! Proceed to Step 2: Run Consensus Security Audit.'
+        );
+      }
+    );
   }
 
   async function handleAuditRelease() {
     if (!selected) return;
-    await runAction('Running multi-LLM Optimistic Democracy security audit...', async () => {
-      const updated = await runReleaseConsensusAudit(selected, config);
-      upsertRelease(updated);
-      setTab('matrix');
-      setNoticeMessage(
-        lang === 'zh'
-          ? `审计完成：最终裁决 ${updated.status}（风险等级 ${updated.attestation?.riskLevel}）。`
-          : `Consensus audit finalized: Verdict ${updated.status} (${updated.attestation?.riskLevel} Risk).`
-      );
-    });
+    await runAction(
+      lang === 'zh'
+        ? '正在执行多模型乐观民主（Optimistic Democracy）共识安全审计...'
+        : 'Running multi-LLM Optimistic Democracy security audit...',
+      async () => {
+        const updated = await runReleaseConsensusAudit(selected, config);
+        upsertRelease(updated);
+        setTab('matrix');
+        setNoticeMessage(
+          lang === 'zh'
+            ? `审计完成：最终裁决 ${updated.status}（风险等级 ${updated.attestation?.riskLevel}）。`
+            : `Consensus audit finalized: Verdict ${updated.status} (${updated.attestation?.riskLevel} Risk).`
+        );
+      }
+    );
   }
 
   async function handleChallengeSubmit(e: FormEvent) {
     e.preventDefault();
     if (!selected) return;
-    await runAction('Submitting security challenge...', async () => {
-      const updated = await submitReleaseChallenge(
-        selected,
-        {
-          claimedCategory: challengeCategory,
-          evidenceSourceIndices: challengeIndices.length ? challengeIndices : [0],
-          statement: challengeStatement,
-        },
-        config
-      );
-      upsertRelease(updated);
-      setShowChallengeModal(false);
-      setChallengeStatement('');
-      setTab('challenges');
-      setNoticeMessage(
-        lang === 'zh'
-          ? '挑战已登记上链，状态已变更为 CHALLENGED，请点击底部按钮触发重审！'
-          : 'Challenge recorded! Status is now CHALLENGED — click Run Challenge Re-Audit below.'
-      );
-    });
+    await runAction(
+      lang === 'zh' ? '正在提交链上安全挑战...' : 'Submitting security challenge...',
+      async () => {
+        const updated = await submitReleaseChallenge(
+          selected,
+          {
+            claimedCategory: challengeCategory,
+            evidenceSourceIndices: challengeIndices.length ? challengeIndices : [0],
+            statement: challengeStatement,
+          },
+          config
+        );
+        upsertRelease(updated);
+        setShowChallengeModal(false);
+        setChallengeStatement('');
+        setTab('challenges');
+        setNoticeMessage(
+          lang === 'zh'
+            ? '挑战已登记上链，状态已变更为 CHALLENGED，请点击底部按钮触发重审！'
+            : 'Challenge recorded! Status is now CHALLENGED — click Run Challenge Re-Audit below.'
+        );
+      }
+    );
   }
 
   function handleSaveSettings(e: FormEvent) {
@@ -364,7 +394,11 @@ export default function App() {
     setPage('registry');
     setNoticeMessage(
       settingsDraft.mode === 'demo'
-        ? 'Switched to Local Demo Sandbox.'
+        ? lang === 'zh'
+          ? '已切换至本地确定性演练沙箱。'
+          : 'Switched to Local Demo Sandbox.'
+        : lang === 'zh'
+        ? `已连接至 GenLayer 链上 RPC（${settingsDraft.rpcUrl}）。`
         : `Connected to GenLayer Live RPC (${settingsDraft.rpcUrl}).`
     );
   }
@@ -849,7 +883,9 @@ export default function App() {
                         {selected.snapshot && (
                           <div className="sg-summary-box">
                             <strong>
-                              Immutable Evidence Snapshot Hash:{' '}
+                              {lang === 'zh'
+                                ? '不可篡改源码快照哈希：'
+                                : 'Immutable Evidence Snapshot Hash: '}
                               <code>{selected.snapshot.snapshotHash}</code>
                             </strong>
                             <p>
@@ -884,7 +920,9 @@ export default function App() {
                                         check.status === 'VERIFIED' ? 'approved' : 'blocked'
                                       }`}
                                     >
-                                      {check.status}
+                                      {lang === 'zh' && check.status === 'VERIFIED'
+                                        ? '哈希已核验 (VERIFIED)'
+                                        : check.status}
                                     </span>
                                   )}
                                   <a
@@ -899,7 +937,11 @@ export default function App() {
                               </div>
                               <div className="sg-meta-row" style={{ marginTop: 8 }}>
                                 <span>SHA-256: {src.sha256}</span>
-                                <span>Size: {src.byteLength} bytes</span>
+                                <span>
+                                  {lang === 'zh'
+                                    ? `字节大小：${src.byteLength} 字节`
+                                    : `Size: ${src.byteLength} bytes`}
+                                </span>
                               </div>
                               {(selected.snapshot?.materials[i] || src.contentPreview) && (
                                 <pre className="sg-code-preview">
@@ -938,7 +980,7 @@ export default function App() {
                             <div key={ch.id} className="sg-source-card">
                               <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <strong>
-                                  Challenge #{ch.id} ·{' '}
+                                  {lang === 'zh' ? `挑战 #${ch.id}` : `Challenge #${ch.id}`} ·{' '}
                                   {getFindingCategoryLabel(ch.claimedCategory, lang)}
                                 </strong>
                                 <span
@@ -950,7 +992,13 @@ export default function App() {
                                       : 'neutral'
                                   }`}
                                 >
-                                  {ch.status}
+                                  {lang === 'zh'
+                                    ? ch.status === 'UPHELD'
+                                      ? '挑战成立 (UPHELD)'
+                                      : ch.status === 'OPEN'
+                                      ? '待重审 (OPEN)'
+                                      : '已驳回 (REJECTED)'
+                                    : ch.status}
                                 </span>
                               </div>
                               <p style={{ fontSize: '0.86rem', color: '#cbd5e1', margin: '8px 0' }}>
@@ -960,9 +1008,21 @@ export default function App() {
                                   : ch.statement}
                               </p>
                               <div className="sg-meta-row">
-                                <span>Challenger: {shortenHex(ch.challenger, 8, 6)}</span>
-                                <span>Evidence Source Indices: [{ch.evidenceSourceIndices.join(', ')}]</span>
-                                {ch.resolvedRound && <span>Resolved in Round #{ch.resolvedRound}</span>}
+                                <span>
+                                  {lang === 'zh' ? '挑战者' : 'Challenger'}:{' '}
+                                  {shortenHex(ch.challenger, 8, 6)}
+                                </span>
+                                <span>
+                                  {lang === 'zh' ? '证据源文件下标' : 'Evidence Source Indices'}: [
+                                  {ch.evidenceSourceIndices.join(', ')}]
+                                </span>
+                                {ch.resolvedRound && (
+                                  <span>
+                                    {lang === 'zh'
+                                      ? `于第 #${ch.resolvedRound} 轮重审裁决`
+                                      : `Resolved in Round #${ch.resolvedRound}`}
+                                  </span>
+                                )}
                               </div>
                             </div>
                           ))
@@ -974,13 +1034,17 @@ export default function App() {
                       <div>
                         <div className="sg-source-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <strong>1. Pre-Install Terminal Guard CLI</strong>
+                            <strong>
+                              {lang === 'zh'
+                                ? '1. 安装前终端安全拦截 CLI 命令'
+                                : '1. Pre-Install Terminal Guard CLI'}
+                            </strong>
                             <button
                               className="sg-btn"
                               onClick={() => copyText('cli', integrationSnippets.cliCommand)}
                             >
                               {copiedKey === 'cli' ? <Check size={14} /> : <Copy size={14} />}
-                              <span>Copy</span>
+                              <span>{lang === 'zh' ? '复制' : 'Copy'}</span>
                             </button>
                           </div>
                           <pre className="sg-code-preview">{integrationSnippets.cliCommand}</pre>
@@ -988,13 +1052,17 @@ export default function App() {
 
                         <div className="sg-source-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <strong>2. Embeddable GitHub README Attestation Badge</strong>
+                            <strong>
+                              {lang === 'zh'
+                                ? '2. 可嵌入 GitHub README 的动态安全认证徽章'
+                                : '2. Embeddable GitHub README Attestation Badge'}
+                            </strong>
                             <button
                               className="sg-btn"
                               onClick={() => copyText('badge', integrationSnippets.markdown)}
                             >
                               {copiedKey === 'badge' ? <Check size={14} /> : <Copy size={14} />}
-                              <span>Copy</span>
+                              <span>{lang === 'zh' ? '复制' : 'Copy'}</span>
                             </button>
                           </div>
                           <pre className="sg-code-preview">{integrationSnippets.markdown}</pre>
@@ -1002,13 +1070,17 @@ export default function App() {
 
                         <div className="sg-source-card">
                           <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <strong>3. Self-Protecting MCP Server Configuration</strong>
+                            <strong>
+                              {lang === 'zh'
+                                ? '3. 自保护 MCP 服务器接入配置'
+                                : '3. Self-Protecting MCP Server Configuration'}
+                            </strong>
                             <button
                               className="sg-btn"
                               onClick={() => copyText('mcp', integrationSnippets.mcpConfigJson)}
                             >
                               {copiedKey === 'mcp' ? <Check size={14} /> : <Copy size={14} />}
-                              <span>Copy</span>
+                              <span>{lang === 'zh' ? '复制' : 'Copy'}</span>
                             </button>
                           </div>
                           <pre className="sg-code-preview">{integrationSnippets.mcpConfigJson}</pre>
@@ -1071,7 +1143,9 @@ export default function App() {
 
           {page === 'register' && (
             <section>
-              <div className="sg-eyebrow">COMMIT-PINNED RELEASE SUBMISSION</div>
+              <div className="sg-eyebrow">
+                {lang === 'zh' ? '固定 COMMIT 版本审计登记' : 'COMMIT-PINNED RELEASE SUBMISSION'}
+              </div>
               <h1>{t.registerTitle}</h1>
               <p style={{ color: '#94a3b8' }}>{t.registerSubtitle}</p>
 
@@ -1081,7 +1155,11 @@ export default function App() {
                   className="sg-btn"
                   onClick={() => {
                     setDraft(buildPublicLiveTemplateSpec(String(releases.length + 1)));
-                    setNoticeMessage('Filled verified OpenZeppelin commit-pinned source template.');
+                    setNoticeMessage(
+                      lang === 'zh'
+                        ? '已填入经过验证的 OpenZeppelin 固定 Commit 源码模板。'
+                        : 'Filled verified OpenZeppelin commit-pinned source template.'
+                    );
                   }}
                 >
                   <Sparkles size={15} />
@@ -1092,14 +1170,18 @@ export default function App() {
                   className="sg-btn"
                   onClick={() => setDraft(emptyReleaseDraft())}
                 >
-                  <span>Clear Form</span>
+                  <span>{lang === 'zh' ? '清空表单' : 'Clear Form'}</span>
                 </button>
               </div>
 
               <form className="sg-form-card" onSubmit={handleRegisterSubmit}>
                 <div className="sg-grid-2">
                   <div className="sg-field">
-                    <label>Skill / MCP Identifier (slug) *</label>
+                    <label>
+                      {lang === 'zh'
+                        ? '技能 / MCP 唯一标识 (slug) *'
+                        : 'Skill / MCP Identifier (slug) *'}
+                    </label>
                     <input
                       required
                       value={draft.skillId}
@@ -1108,7 +1190,7 @@ export default function App() {
                     />
                   </div>
                   <div className="sg-field">
-                    <label>Display Title *</label>
+                    <label>{lang === 'zh' ? '显示标题 *' : 'Display Title *'}</label>
                     <input
                       required
                       value={draft.title}
@@ -1117,7 +1199,7 @@ export default function App() {
                     />
                   </div>
                   <div className="sg-field">
-                    <label>Package Type *</label>
+                    <label>{lang === 'zh' ? '组件类型 *' : 'Package Type *'}</label>
                     <select
                       value={draft.packageType}
                       onChange={(e) =>
@@ -1127,12 +1209,16 @@ export default function App() {
                         })
                       }
                     >
-                      <option value="mcp_server">MCP Server (mcp_server)</option>
-                      <option value="agent_skill">Agent Skill (agent_skill)</option>
+                      <option value="mcp_server">
+                        {lang === 'zh' ? 'MCP 服务器 (mcp_server)' : 'MCP Server (mcp_server)'}
+                      </option>
+                      <option value="agent_skill">
+                        {lang === 'zh' ? 'AI 智能体技能 (agent_skill)' : 'Agent Skill (agent_skill)'}
+                      </option>
                     </select>
                   </div>
                   <div className="sg-field">
-                    <label>Semantic Version *</label>
+                    <label>{lang === 'zh' ? '语义化版本号 *' : 'Semantic Version *'}</label>
                     <input
                       required
                       value={draft.version}
@@ -1141,7 +1227,11 @@ export default function App() {
                     />
                   </div>
                   <div className="sg-field">
-                    <label>GitHub Repository (owner/repo) *</label>
+                    <label>
+                      {lang === 'zh'
+                        ? 'GitHub 仓库 (owner/repo) *'
+                        : 'GitHub Repository (owner/repo) *'}
+                    </label>
                     <input
                       required
                       value={draft.repo}
@@ -1150,7 +1240,11 @@ export default function App() {
                     />
                   </div>
                   <div className="sg-field">
-                    <label>40-Character Git Commit SHA *</label>
+                    <label>
+                      {lang === 'zh'
+                        ? '40 位完整 Git Commit SHA *'
+                        : '40-Character Git Commit SHA *'}
+                    </label>
                     <input
                       required
                       pattern="[0-9a-fA-F]{40}"
@@ -1162,7 +1256,11 @@ export default function App() {
                 </div>
 
                 <div className="sg-field">
-                  <label>Scope & Security Behavior Summary *</label>
+                  <label>
+                    {lang === 'zh'
+                      ? '功能范围与安全行为声明摘要 *'
+                      : 'Scope & Security Behavior Summary *'}
+                  </label>
                   <textarea
                     required
                     rows={3}
@@ -1172,7 +1270,9 @@ export default function App() {
                 </div>
 
                 <label style={{ fontSize: '0.84rem', color: '#94a3b8', fontWeight: 600 }}>
-                  Declared Host Capabilities (Check all capabilities this release legitimately uses)
+                  {lang === 'zh'
+                    ? '发布者声明的宿主机敏感能力（勾选该版本合法使用的全部敏感权限）'
+                    : 'Declared Host Capabilities (Check all capabilities this release legitimately uses)'}
                 </label>
                 <div className="sg-perm-grid">
                   {CAPABILITIES.map((cap) => (
@@ -1210,7 +1310,11 @@ export default function App() {
                     margin: '16px 0 10px',
                   }}
                 >
-                  <strong>Commit-Pinned Source Files (1–4 files, ≤ 16,384 bytes each)</strong>
+                  <strong>
+                    {lang === 'zh'
+                      ? '固定 Commit 源码文件列表（1–4 个文件，单文件 ≤ 16,384 字节）'
+                      : 'Commit-Pinned Source Files (1–4 files, ≤ 16,384 bytes each)'}
+                  </strong>
                   <button
                     type="button"
                     className="sg-btn"
@@ -1219,7 +1323,7 @@ export default function App() {
                       setDraft({ ...draft, sources: [...draft.sources, emptySourceDraft()] })
                     }
                   >
-                    <Plus size={14} /> Add File
+                    <Plus size={14} /> {lang === 'zh' ? '添加源文件' : 'Add File'}
                   </button>
                 </div>
 
@@ -1227,7 +1331,9 @@ export default function App() {
                   <div key={idx} className="sg-source-card">
                     <div className="sg-grid-2">
                       <div className="sg-field">
-                        <label>Relative File Path in Repo *</label>
+                        <label>
+                          {lang === 'zh' ? '仓库内相对文件路径 *' : 'Relative File Path in Repo *'}
+                        </label>
                         <input
                           required
                           value={src.path}
@@ -1247,7 +1353,7 @@ export default function App() {
                         />
                       </div>
                       <div className="sg-field">
-                        <label>File Role *</label>
+                        <label>{lang === 'zh' ? '文件角色 *' : 'File Role *'}</label>
                         <select
                           value={src.role}
                           onChange={(e) =>
@@ -1270,7 +1376,11 @@ export default function App() {
                     </div>
 
                     <div className="sg-field">
-                      <label>Pinned raw.githubusercontent.com URL *</label>
+                      <label>
+                        {lang === 'zh'
+                          ? '固定 Commit 的 raw.githubusercontent.com 地址 *'
+                          : 'Pinned raw.githubusercontent.com URL *'}
+                      </label>
                       <div style={{ display: 'flex', gap: 8 }}>
                         <input
                           required
@@ -1298,7 +1408,11 @@ export default function App() {
 
                     <div className="sg-grid-2">
                       <div className="sg-field">
-                        <label>Exact Raw Byte SHA-256 (64 hex) *</label>
+                        <label>
+                          {lang === 'zh'
+                            ? '原始字节精确 SHA-256 (64 位十六进制) *'
+                            : 'Exact Raw Byte SHA-256 (64 hex) *'}
+                        </label>
                         <input
                           required
                           pattern="[0-9a-fA-F]{64}"
@@ -1314,7 +1428,11 @@ export default function App() {
                         />
                       </div>
                       <div className="sg-field">
-                        <label>Exact Byte Length (1–16384) *</label>
+                        <label>
+                          {lang === 'zh'
+                            ? '精确字节长度 (1–16384) *'
+                            : 'Exact Byte Length (1–16384) *'}
+                        </label>
                         <input
                           required
                           type="number"
@@ -1341,7 +1459,7 @@ export default function App() {
                     className="sg-btn"
                     onClick={() => setPage('registry')}
                   >
-                    Cancel
+                    {lang === 'zh' ? '取消' : 'Cancel'}
                   </button>
                   <button
                     type="submit"
@@ -1358,16 +1476,33 @@ export default function App() {
 
           {page === 'sdk' && (
             <section>
-              <div className="sg-eyebrow">CONTINUOUS AGENT ECOSYSTEM UTILITY</div>
+              <div className="sg-eyebrow">
+                {lang === 'zh' ? '智能体生态持续防护工具' : 'CONTINUOUS AGENT ECOSYSTEM UTILITY'}
+              </div>
               <h1>{t.cliPageTitle}</h1>
               <p style={{ color: '#94a3b8' }}>{t.cliPageSubtitle}</p>
 
               <div className="sg-form-card">
-                <h3>1. Command-Line Pre-Install Verifier (`cli/skillguard.mjs`)</h3>
+                <h3>
+                  {lang === 'zh'
+                    ? '1. 命令行安装前安全核验器 (`cli/skillguard.mjs`)'
+                    : '1. Command-Line Pre-Install Verifier (`cli/skillguard.mjs`)'}
+                </h3>
                 <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
-                  Run before installing any MCP server or Agent Skill. Exits with code <code>0</code>{' '}
-                  only if the commit-pinned release is <code>APPROVED</code> on SkillGuard; exits with
-                  code <code>2</code> if <code>BLOCKED</code> or unverified.
+                  {lang === 'zh' ? (
+                    <>
+                      在安装任何社区 MCP 服务器或智能体技能前运行。仅当该固定 Commit 版本在
+                      SkillGuard 上处于 <code>APPROVED</code> 状态时返回退出码 <code>0</code>；若处于{' '}
+                      <code>BLOCKED</code> 或未认证状态则返回非零退出码 <code>2</code> 自动拦截。
+                    </>
+                  ) : (
+                    <>
+                      Run before installing any MCP server or Agent Skill. Exits with code{' '}
+                      <code>0</code> only if the commit-pinned release is <code>APPROVED</code> on
+                      SkillGuard; exits with code <code>2</code> if <code>BLOCKED</code> or
+                      unverified.
+                    </>
+                  )}
                 </p>
                 <pre className="sg-code-preview">
 {`# Verify a commit-pinned release on SkillGuard before installing
@@ -1378,12 +1513,24 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                 </pre>
 
                 <h3 style={{ marginTop: 24 }}>
-                  2. Self-Protecting MCP Server (`cli/mcp-server.mjs`)
+                  {lang === 'zh'
+                    ? '2. 自保护 MCP 服务器 (`cli/mcp-server.mjs`)'
+                    : '2. Self-Protecting MCP Server (`cli/mcp-server.mjs`)'}
                 </h3>
                 <p style={{ color: '#94a3b8', fontSize: '0.88rem' }}>
-                  Exposes JSON-RPC 2.0 MCP tools <code>skillguard_check_attestation</code> and{' '}
-                  <code>skillguard_list_verified_skills</code> over stdio so AI coding agents can
-                  verify external tools autonomously before invoking them.
+                  {lang === 'zh' ? (
+                    <>
+                      通过标准输入输出（stdio）暴露 JSON-RPC 2.0 MCP 工具{' '}
+                      <code>skillguard_check_attestation</code>，供 Claude、Cursor 或 Antigravity
+                      等编程智能体在调用外部技能前自主完成链上安全自检。
+                    </>
+                  ) : (
+                    <>
+                      Exposes JSON-RPC 2.0 MCP tool <code>skillguard_check_attestation</code> over
+                      stdio so AI coding agents can verify external tools autonomously before
+                      invoking them.
+                    </>
+                  )}
                 </p>
                 <pre className="sg-code-preview">
 {`{
@@ -1405,7 +1552,9 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
 
           {page === 'settings' && (
             <section>
-              <div className="sg-eyebrow">GENLAYER NETWORK CONNECTION</div>
+              <div className="sg-eyebrow">
+                {lang === 'zh' ? 'GENLAYER 网络与智能合约连接' : 'GENLAYER NETWORK CONNECTION'}
+              </div>
               <h1>{t.settingsTitle}</h1>
               <p style={{ color: '#94a3b8' }}>{t.settingsSubtitle}</p>
 
@@ -1422,7 +1571,7 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                       })
                     }
                   >
-                    Use Local Demo Sandbox
+                    {lang === 'zh' ? '使用本地演练沙箱' : 'Use Local Demo Sandbox'}
                   </button>
                   <button
                     type="button"
@@ -1436,7 +1585,9 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                       })
                     }
                   >
-                    Use Official Studio-dev Simulator (Chain 61997)
+                    {lang === 'zh'
+                      ? '使用官方 Studio-dev 模拟器 (Chain 61997)'
+                      : 'Use Official Studio-dev Simulator (Chain 61997)'}
                   </button>
                   <button
                     type="button"
@@ -1449,13 +1600,15 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                       })
                     }
                   >
-                    Use Public Testnet Bradbury Phase 2 (Chain 4221)
+                    {lang === 'zh'
+                      ? '使用公共测试网 Bradbury Phase 2 (Chain 4221)'
+                      : 'Use Public Testnet Bradbury Phase 2 (Chain 4221)'}
                   </button>
                 </div>
 
                 <div className="sg-grid-2">
                   <div className="sg-field">
-                    <label>Execution Mode</label>
+                    <label>{lang === 'zh' ? '运行模式' : 'Execution Mode'}</label>
                     <select
                       value={settingsDraft.mode}
                       onChange={(e) =>
@@ -1465,13 +1618,21 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                         })
                       }
                     >
-                      <option value="demo">Local Demo Sandbox (No Wallet Needed)</option>
-                      <option value="live">GenLayer Live Chain (Studio-dev / Bradbury)</option>
+                      <option value="demo">
+                        {lang === 'zh'
+                          ? '本地演练沙箱（无需连接钱包）'
+                          : 'Local Demo Sandbox (No Wallet Needed)'}
+                      </option>
+                      <option value="live">
+                        {lang === 'zh'
+                          ? 'GenLayer 链上实时模式（Studio-dev / Bradbury）'
+                          : 'GenLayer Live Chain (Studio-dev / Bradbury)'}
+                      </option>
                     </select>
                   </div>
 
                   <div className="sg-field">
-                    <label>GenLayer RPC Endpoint</label>
+                    <label>{lang === 'zh' ? 'GenLayer RPC 节点地址' : 'GenLayer RPC Endpoint'}</label>
                     <input
                       value={settingsDraft.rpcUrl}
                       onChange={(e) =>
@@ -1482,7 +1643,11 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                 </div>
 
                 <div className="sg-field">
-                  <label>Deployed SkillGuard Intelligent Contract Address (0x...)</label>
+                  <label>
+                    {lang === 'zh'
+                      ? '已部署的 SkillGuard 智能合约地址 (0x...)'
+                      : 'Deployed SkillGuard Intelligent Contract Address (0x...)'}
+                  </label>
                   <input
                     value={settingsDraft.contractAddress}
                     onChange={(e) =>
@@ -1560,7 +1725,9 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
             <p style={{ color: '#94a3b8', fontSize: '0.85rem' }}>{t.challengeModalSub}</p>
             <form onSubmit={handleChallengeSubmit}>
               <div className="sg-field">
-                <label>Claimed Threat Category *</label>
+                <label>
+                  {lang === 'zh' ? '指控威胁类别 *' : 'Claimed Threat Category *'}
+                </label>
                 <select
                   value={challengeCategory}
                   onChange={(e) => setChallengeCategory(e.target.value as FindingCategory)}
@@ -1574,7 +1741,9 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
               </div>
 
               <div className="sg-field">
-                <label>Evidence Source File Indices *</label>
+                <label>
+                  {lang === 'zh' ? '涉及源文件下标 *' : 'Evidence Source File Indices *'}
+                </label>
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
                   {selected.spec.sources.map((src, idx) => (
                     <label key={src.path} style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
@@ -1598,13 +1767,21 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
               </div>
 
               <div className="sg-field">
-                <label>Detailed Technical Evidence Statement *</label>
+                <label>
+                  {lang === 'zh'
+                    ? '详细技术证据与代码行说明 *'
+                    : 'Detailed Technical Evidence Statement *'}
+                </label>
                 <textarea
                   required
                   rows={4}
                   value={challengeStatement}
                   onChange={(e) => setChallengeStatement(e.target.value)}
-                  placeholder="Describe the exact line numbers, undeclared API calls, or prompt-injection payload..."
+                  placeholder={
+                    lang === 'zh'
+                      ? '请说明具体源码行号、未声明的敏感 API 调用或提示词注入载荷...'
+                      : 'Describe the exact line numbers, undeclared API calls, or prompt-injection payload...'
+                  }
                 />
               </div>
 
@@ -1614,7 +1791,7 @@ node cli/skillguard.mjs check agent-tools-lab/solana-rebalancer-mcp@7b4e9102aa89
                   className="sg-btn"
                   onClick={() => setShowChallengeModal(false)}
                 >
-                  Cancel
+                  {lang === 'zh' ? '取消' : 'Cancel'}
                 </button>
                 <button type="submit" className="sg-btn sg-btn-danger" disabled={!!busyMessage}>
                   <span>{t.btnSubmitChallenge}</span>

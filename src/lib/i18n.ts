@@ -8,11 +8,14 @@ import {
 } from './domain';
 
 export type Language = 'en' | 'zh';
-const LANG_STORAGE_KEY = 'sg:lang:v1';
+const LANG_STORAGE_KEY = 'sg:lang:v2';
 
 export function getLanguage(): Language {
   if (typeof window === 'undefined') return 'en';
   try {
+    const urlParam = new URLSearchParams(window.location.search).get('lang');
+    if (urlParam === 'zh') return 'zh';
+    if (urlParam === 'en') return 'en';
     const saved = window.localStorage.getItem(LANG_STORAGE_KEY);
     return saved === 'zh' ? 'zh' : 'en';
   } catch {
