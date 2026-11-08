@@ -26,8 +26,8 @@ SkillGuard is a GenLayer-powered supply-chain security attestation registry for 
 | **GenLayer Testnet Bradbury Phase 2** | `4221` | `0x7de3BF9F73d512291f2623DCd3C618d4a83b9bb5` | `0x80bc276d37b19d044e7b72d4d4de950d38bc118c180b0e390976a8ca91d72a0d` (Block `250216`, `FINALIZED` / `MAJORITY_AGREE`) | [View on Bradbury Explorer](https://scan.bradbury.genlayer.com/address/0x7de3BF9F73d512291f2623DCd3C618d4a83b9bb5) (`https://rpc-bradbury.genlayer.com`) |
 | **GenLayer Official Studio-dev Simulator** | `61997` | `0x80C412F90Ad2d3E5F57437C753F9202b5090Fd18` | `0x5968834be1eef7ad61032792afd120ba67661c667e5c1dd40debef7fb9ec70b9` (`FINALIZED` E2E verified) | `https://studio-dev.genlayer.com/api` |
 
-- **Live Web Workbench**: `https://glieser2.github.io/skillguard/`
-- **GitHub Repository**: `https://github.com/glieser2/skillguard`
+- **Live Web Workbench**: `https://gliesercom.github.io/skillguard/`
+- **GitHub Repository**: `https://github.com/gliesercom/skillguard`
 - **Security Audit Report**: [`docs/audit-report.md`](./docs/audit-report.md)
 - **Bradbury Deployment Proof**: [`artifacts/bradbury-deployment-proof.json`](./artifacts/bradbury-deployment-proof.json)
 
